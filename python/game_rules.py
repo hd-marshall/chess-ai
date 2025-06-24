@@ -2,26 +2,7 @@ from typing import Callable, Dict, Tuple, List, Union
 
 class Game_Rules:
 
-    def __init__(self) -> None:
-        self.board = [
-        ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
-        ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
-        ["--", "--", "--", "--", "--", "--", "--", "--"],
-        ["--", "--", "--", "--", "--", "--", "--", "--"],
-        ["--", "--", "--", "--", "--", "--", "--", "--"],
-        ["--", "--", "--", "--", "--", "--", "--", "--"],
-        ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
-        ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
-        ]
-        self.player_colour : str = "w"
-
-        # self.white_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = self.get_valid_moves("w", )
-        # self.black_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = self.get_valid_moves("b", )
-
-        self.pinned_pieces = [] #Dict[Tuple[int, int], Tuple[int, int]] = {}
-        self.in_check = False        
-        self.white_king_location = (7, 4)
-        self.black_king_location = (0, 4)
+    def __init__(self) -> None:  
 
         self.directions: Dict[str, Tuple[int, int]] = {
             "N": (-1, 0),
@@ -34,36 +15,14 @@ class Game_Rules:
             "NW": (-1, -1),
         }
         self.reverse_directions = {v: k for k, v in self.directions.items()}
-        self.piece_directions: Dict[str, List[Union[str, Tuple[int, int]]]] = {
+        self.piece_directions: Dict[str, List[str]] = {
+            "P": None,
             "R": ["N", "E", "S", "W"],
+            "N": None,
             "B": ["NE", "SE", "SW", "NW"],
             "Q": ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
             "K": ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
         }
-
-    
-    def get_valid_moves(self, player_colour: str, board: List[List[str]]) ->  Dict[Tuple[int, int], List[Tuple[int, int]]]:
-
-        move_list = {}
-        opponent_colour = "b" if player_colour == "w" else "b"
-        n = len(self.board)
-
-        for i in range(n):
-            for j in range(n):
-
-                if self.board[i][j] != "--" and self.board[i][j][0] == player_colour:
-
-                    piece_type = self.board[i][j][1]
-                    position = (i, j)
-                    
-                    move_list[position] = []
-                    move_list[position].extend(self.rules.get_piece_move(piece_type, position, opponent_colour, board))
-
-        return move_list
-
-    def update_valid_moves(self, player_colour: str) -> Dict[Tuple[int, int], List[Tuple[int, int]]]:
-        pass
-    
 
     def get_piece_move(self, piece: str, start_sqr: Tuple[int, int], opponent_colour: str, board: List[List[str]]) -> List[Tuple[int, int]]:
 
@@ -113,6 +72,7 @@ class Game_Rules:
 
     def get_king_moves(self, start_sqr: Tuple[int, int], opponent_colour: str, board: List[List[str]]) -> List[Tuple[int, int]]:
         
+        #  ! King Location, Needs to be moved to Game State
         if opponent_colour == "w":
             self.white_king_location = start_sqr
         else:
@@ -193,7 +153,7 @@ class Game_Rules:
 
         return valid_pawn_moves
 
-    def promote_pawn(self, promote_sqr: Tuple[int, int], opponent_colour: str, board: List[List[str]]) -> Tuple[Tuple[int, int]]:
+    def promote_pawn(self, promote_sqr: Tuple[int, int], opponent_colour: str, board: List[List[str]]) -> None:
 
         curr_turn = "b" if opponent_colour == "w" else "w"
         r, c = promote_sqr[0], promote_sqr[1]
@@ -204,7 +164,7 @@ class Game_Rules:
         elif curr_turn == "b" and r == 7:
             board[r][c] = "bQ"
 
-    def square_under_attack_direction(self, sqr, attacking_pieces, board):
+    def square_under_attack_direction(self, sqr: Tuple[int, int], attacking_pieces: List[Tuple[int, int]], board: List[List[str]]) -> Tuple[int, int]:
             
         attacked_row, attacked_col = sqr
         attack_row, attack_col = attacking_pieces[0]
@@ -232,9 +192,10 @@ class Game_Rules:
 
                 return direction_str
 
-        return None  # If no valid attack direction is found
+        # If no valid attack direction is found
+        return None
     
-    def square_under_attack(self, sqr: Tuple[int, int], opponent_moves: Dict[Tuple[int, int], List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
+    def square_under_attack(self, sqr: Tuple[int, int], opponent_moves: Dict[Tuple[int, int], List[Tuple[int, int]]]) -> List[Tuple[int, int]]:
         
         attacking_pieces = []
 
@@ -244,68 +205,46 @@ class Game_Rules:
                 attacking_pieces.append(piece)
         
         return attacking_pieces
+    
+    def single_check(self, king_location: Tuple[int, int], attack_piece: Tuple[int, int], attacked_sqrs: List[Tuple[int, int]], valid_moves: Dict[Tuple[int, int], List[Tuple[int, int]]], ) -> Dict[Tuple[int, int], List[Tuple[int, int]]]:
 
-    def checks(self, turn_take: str, player_moves: Dict[Tuple[int, int], List[Tuple[int, int]]], opponent_moves: Dict[Tuple[int, int], List[Tuple[int, int]]], board) -> None:
-
-        king_location = self.white_king_location if turn_take == "b" else self.black_king_location
-
-        attacking_pieces = self.square_under_attack(king_location, opponent_moves)
-
-        # If 1 Piece is attacking the King.
-        if len(attacking_pieces) == 1:
+        for piece, moves in valid_moves.items():
             
-            attack_piece = attacking_pieces[0]
-            attacked_dir = self.square_under_attack_direction(king_location, attacking_pieces, board)
-            attacked_sqrs = self.get_direction_moves(attacked_dir, attacking_pieces[0], turn_take, board)
+            new_valid_moves = []    
 
-            for piece, moves in player_moves.items():
-                
-                new_valid_moves = []    
+            for move in moves:
+                if piece == king_location:
+                    if move not in attacked_sqrs or attack_piece == move:
+                        new_valid_moves.append(move)
 
-                for move in moves:
-                    if piece == king_location:
-                        if move not in attacked_sqrs or attack_piece == move:
-                            new_valid_moves.append(move)
+                else:
+                    if move in attacked_sqrs or attack_piece == move:
+                        new_valid_moves.append(move)
 
-                    else:
-                        if move in attacked_sqrs or attack_piece == move:
-                            new_valid_moves.append(move)
-
-                player_moves[piece] = new_valid_moves
-
-        # If more then 1 Piece is attacking the King.
-        if len(attacking_pieces) > 1:
-
-            player_moves.clear()
-
-            for moves in player_moves[king_location]:
-                if move not in attacked_sqrs:
-                    player_moves[king_location].extend(move)
-
-    def checkmate(self) -> None:
-        pass
+            valid_moves[piece] = new_valid_moves
 
     def pins(self, dir: str, start_sqr: Tuple[int, int], opponent_colour: str, board: List[List[str]]) -> None:
+        pass
         
-        opponent_king = self.white_king_location if opponent_colour == "b" else self.black_king_location
+        # opponent_king = "w" if opponent_colour == "b" else "b"
 
-        r, c = start_sqr[0], start_sqr[1]
-        dr, dc = self.directions[dir]
+        # r, c = start_sqr[0], start_sqr[1]
+        # dr, dc = self.directions[dir]
 
-        row, column = r + dr, c + dc
+        # row, column = r + dr, c + dc
 
-        while 0 <= row < len(board) and 0 <= column < len(board):
+        # while 0 <= row < len(board) and 0 <= column < len(board):
 
-            if board[row][column] == "--":
+        #     if board[row][column] == "--":
 
-                row += dr
-                column += dc
+        #         row += dr
+        #         column += dc
 
-            elif (row, column) != opponent_king:
+        #     elif (row, column) != opponent_king:
 
-                break
+        #         break
         
-            elif (row, column) == opponent_king:
+        #     elif (row, column) == opponent_king:
 
-                self.pinned_pieces.append(start_sqr)
-                break
+        #         self.pinned_pieces.append(start_sqr)
+        #         break

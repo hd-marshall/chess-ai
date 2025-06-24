@@ -172,7 +172,7 @@ class Chess_Graphics:
 
     def get_sqr(self, location: Tuple[int, int]) -> Tuple[int, int]:
         """
-        Convert a pixel location to board coordinates.
+        Convert a window pixel location to board coordinates.
 
         This function takes a pixel location from a mouse click and converts it 
         to the corresponding row and column on the chess board.

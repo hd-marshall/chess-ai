@@ -11,7 +11,7 @@ def main():
     clock = graphics.create_clock()
     
     game_state = Game_State()
-    game_state.create_move_list()
+    game_state.set_valid_moves()
     move_made = False
     
     running = True
@@ -20,7 +20,8 @@ def main():
         for e in p.event.get():
 
             if move_made:
-                game_state.create_move_list()
+                game_state.set_valid_moves()
+                game_state.remove_illegal_moves()
                 move_made = False
 
             if e.type == p.QUIT:

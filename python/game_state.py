@@ -5,6 +5,8 @@ from typing import Dict, Tuple, List
 class Game_State:
 
     def __init__(self) -> None:
+        self.clicked_squares : List[Tuple[int, int], Tuple[int, int]] = []
+
         self.board = [
         ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
         ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
@@ -15,49 +17,54 @@ class Game_State:
         ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
         ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
         ]
-        self.rules = Game_Rules()
-        self.clicked_squares : List[Tuple[int, int], Tuple[int, int]] = []
+
         self.player_colour : str = "w"
-        self.move_number : int = 0
+        self.white_king_location = (7, 4)
+        self.black_king_location = (0, 4)
 
-        self.valid_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = {}
-        self.valid_opponent_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = {}
+        self.rules = Game_Rules()
+        self.white_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = {}
+        self.black_moves : Dict[Tuple[int, int], List[Tuple[int, int]]] = {}
 
-    def scan_board(self, player_colour: str, opponent_colour: str, moves_dict: Dict[Tuple[int, int], List[Tuple[int, int]]]) -> None:
-        
+        self.pinned_pieces = []
+        self.in_check = False
+        self.checkmate = False
+        self.stalemate = False
+    
+    def set_valid_moves(self) -> None:
+        self.white_moves = self.create_valid_moves("w")
+        self.black_moves = self.create_valid_moves("b")
+
+    def create_valid_moves(self, player_colour: str) -> None:
+        valid_moves = {}
         n = len(self.board)
+        opponent_colour = "w" if player_colour == "b" else "b"
 
         for i in range(n):
             for j in range(n):
 
-                if self.board[i][j] != "--" and self.board[i][j][0] == player_colour:
+                if self.board[i][j] != "--" and self.board[i][j][0] == self.player_colour:
 
-                    piece_type = self.board[i][j][1]
-                    position = (i, j)
+                    piece = self.board[i][j][1]
+                    start_sqr = (i, j)
                     
-                    moves_dict[position] = []
-                    moves_dict[position].extend(self.rules.get_piece_move(piece_type, position, opponent_colour, self.board))
+                    valid_moves[start_sqr] = []
+                    valid_moves[start_sqr].extend(self.rules.get_piece_move(piece, start_sqr, opponent_colour, self.board))
+        
+        return valid_moves
 
-    def create_move_list(self) -> None:
+    def remove_illegal_moves(self) -> None:
+        
+        player_king = self.white_king_location if self.player_colour == "w" else self.black_king_location
+        opponent_moves = self.black_moves if self.player_colour == "w" else self.white_moves
 
-        opponent = "w" if self.player_colour == "b" else "b"
+        attacking_pieces = self.rules.square_under_attack(player_king, opponent_moves)
 
-        self.scan_board(self.player_colour, opponent, self.valid_moves)
-        self.scan_board(opponent, self.player_colour, self.valid_opponent_moves)
+        if len(attacking_pieces) == 1:
+            attack_piece = attacking_pieces[0]
+            attack_dir = self.rules.square_under_attack_direction(player_king, attacking_pieces, self.board)
 
-        self.rules.checks(self.player_colour, self.valid_moves, self.valid_opponent_moves, self.board)
-
-        """
-        print(self.rules.pinned_pieces)
-        if len(self.rules.pinned_pieces) > 0:
-
-            for pinned_piece in self.rules.pinned_pieces:
-
-                self.valid_moves[pinned_piece] = []
-        """
-
-    def update_move_list(self) -> None:
-        pass
+            self.rules.single_check(player_king, attack_piece, attack_dir, self.valid_moves)
 
     def move(self) -> None:
         
@@ -71,21 +78,20 @@ class Game_State:
         self.board[end_row][end_col] = piece_value
         self.board[start_row][start_col] = "--"
 
+        valid_moves = self.white_moves if self.player_colour == "w" else self.black_moves
+        valid_moves.clear()
+
         self.player_colour = "w" if self.player_colour == "b" else "b" 
-        self.move_number += 1
 
-        self.valid_moves.clear()
-        self.valid_opponent_moves.clear()
+    def get_valid_move(self, end_sqr) -> bool:
 
-    def get_legal_move(self, end_sqr) -> bool:
-        
+        valid_moves = self.white_moves if self.player_colour == "w" else self.black_moves
         start_sqr = self.clicked_squares[0]
-
-        if start_sqr in self.valid_moves:
-            if end_sqr in self.valid_moves[start_sqr]:
-
+        
+        if start_sqr in valid_moves:
+            if end_sqr in valid_moves[start_sqr]:
                 return True
-            
+                
         return False
 
     def validate_clicked_sqrs(self, location: Tuple[int, int]) -> bool:
@@ -97,7 +103,7 @@ class Game_State:
         
         self.clicked_squares.append(location)
 
-        if self.get_legal_move(location):
+        if self.get_valid_move(location):
 
             self.clicked_squares.append(location)
             self.move()
@@ -110,6 +116,7 @@ class Game_State:
         
     def create_guidelines(self) -> List[Tuple[int, int]]:
 
+        valid_moves = self.white_moves if self.player_colour == "w" else self.black_moves
         guidelines_squares = []
         
         if len(self.clicked_squares) != 1:
@@ -117,4 +124,4 @@ class Game_State:
         
         row, col = self.clicked_squares[0][0], self.clicked_squares[0][1]
 
-        return self.valid_moves.get((row, col), [])
+        return valid_moves.get((row, col), [])
