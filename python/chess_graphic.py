@@ -32,7 +32,7 @@ class Chess_Graphics:
         """
         pieces = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for piece in pieces:
-            image_path = f"images/{piece}.png"
+            image_path = f"../../assets/images/{piece}.png"
             image = p.image.load(image_path)
             self.IMAGES[piece] = p.transform.scale(image, (int(self.SQUARE_SIZE), int(self.SQUARE_SIZE)))
 
@@ -50,8 +50,8 @@ class Chess_Graphics:
         None
         """
         pm.init()
-        self.SOUNDS['click'] = pm.Sound("sounds/click1.wav")
-        self.SOUNDS['error'] = pm.Sound("sounds/click2Error.wav")
+        self.SOUNDS['click'] = pm.Sound("../../assets/sounds/click1.wav")
+        self.SOUNDS['error'] = pm.Sound("../../assets/sounds/click2Error.wav")
 
         for sound in self.SOUNDS.values():
             sound.set_volume(0.3)
